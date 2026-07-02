@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encrypted Drop & Comm Link</title>
+    
+    <!-- CryptoJS for military-grade AES encryption -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    
+    <!-- Paho MQTT for Real-Time Live Chat -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    
+    <!-- Retro Pixel Font -->
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- GLOBAL STYLES --- */
+        body, html {
+            margin: 0; padding: 0; height: 100%; width: 100%;
+        }
+        
+        * { box-sizing: border-box; }
+
+        /* --- LOGIN PAGE STYLES (Spy Hacker Vibe) --- */
+        #loginPage {
+            background-color: #050505;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .hacker-box {
+            border: 1px solid #00ff00;
+            padding: 30px;
+            box-shadow: 0 0 15px #00ff0033;
+            width: 350px;
+            background: #000;
+        }
+        .hacker-box h2 {
+            text-align: center; margin-top: 0; letter-spacing: 2px;
+        }
+        .hacker-input {
+            width: 100%; padding: 10px; margin: 10px 0;
+            background-color: #000; color: #00ff00; border: 1px solid #00ff00;
+            font-family: 'Courier New', Courier, monospace; outline: none;
+        }
+        .hacker-input:focus { box-shadow: 0 0 8px #00ff00; }
+        .hacker-btn {
+            width: 100%; padding: 12px; margin-top: 15px;
+            background-color: #00ff00; color: #000; border: none;
+            font-weight: bold; cursor: pointer; font-family: 'Courier New', Courier, monospace;
+        }
+        .hacker-btn:hover { background-color: #00cc00; }
+        #loginError { color: #ff3333; margin-top: 10px; text-align: center; min-height: 20px; font-weight: bold;}
+
+        /* --- APP PAGE STYLES (Friendly Pixel Tromso Vibe) --- */
+        #appPage {
+            display: none; /* Hidden until login */
+            font-family: 'VT323', monospace; 
+            min-height: 100%;
+            
+            /* The custom background image */
+            background: #001b36 url('bg.png') no-repeat center center fixed;
+            background-size: cover;
+            
+            color: #ffffff;
+            padding: 20px;
+        }
+        
+        /* Layout for Split Screen */
+        .layout-container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+        }
+
+        .left-col, .right-col {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        /* Glassmorphism/Pixel container style */
+        .friendly-container {
+            background-color: rgba(10, 20, 30, 0.85); 
+            padding: 25px;
+            border-radius: 10px;
+            border: 2px solid #00ff8c;
+            box-shadow: 0 0 15px rgba(0, 255, 140, 0.2);
+            backdrop-filter: blur(4px);
+        }
+
+        .header-row {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px dashed #00ff8c; padding-bottom: 10px; margin-bottom: 20px;
+        }
+        
+        h2.welcome-text { margin: 0; font-size: 28px; color: #00ff8c; text-shadow: 2px 2px #000;}
+        
+        .btn-red {
+            background-color: #ff4757; color: white; border: 2px solid white;
+            padding: 5px 15px; font-family: 'VT323', monospace; font-size: 18px;
+            cursor: pointer; border-radius: 5px; font-weight: bold;
+        }
+        .btn-red:hover { background-color: #ff6b81; }
+        
+        .panel {
+            background-color: rgba(0, 0, 0, 0.4);
+            padding: 15px; border-radius: 8px; margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        h3 { margin-top: 0; color: #a4b0be; font-size: 24px;}
+        
+        textarea, input[type="file"], input[type="text"] {
+            width: 100%; padding: 10px; margin: 10px 0;
+            background-color: rgba(0,0,0,0.6); color: #fff; border: 1px solid #00ff8c; 
+            border-radius: 4px; font-family: 'VT323', monospace; font-size: 18px; outline: none;
+        }
+        textarea:focus, input[type="text"]:focus { box-shadow: 0 0 5px #00ff8c; }
+        
+        .action-btn {
+            width: 100%; padding: 12px; background-color: #1dd1a1; color: #000;
+            border: none; border-radius: 4px; font-size: 20px;
+            font-family: 'VT323', monospace; cursor: pointer; font-weight: bold;
+        }
+        .action-btn:hover { background-color: #10ac84; }
+        .action-btn:active { transform: translateY(2px); }
+        
+        #output { margin-top: 15px; white-space: pre-wrap; word-wrap: break-word; font-size: 20px;}
+        .friendly-error { color: #ff4757; }
+
+        /* --- CHAT STYLES --- */
+        .chat-header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px dashed #00ff8c; padding-bottom: 10px; margin-bottom: 15px;
+        }
+        .chat-header h2 { margin: 0; font-size: 28px; color: #00ff8c; text-shadow: 2px 2px #000; }
+        .chat-status { font-size: 16px; color: #1dd1a1; display: block; }
+        
+        #chatMessages {
+            height: 350px;
+            overflow-y: auto;
+            background-color: rgba(0,0,0,0.6);
+            border: 1px solid #00ff8c;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 20px;
+            /* Grid overlay effect */
+            background-image: linear-gradient(rgba(0, 255, 140, 0.05) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 255, 140, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        
+        .chat-msg { margin: 0; line-height: 1.2; }
+        .chat-sender { color: #1dd1a1; font-weight: bold; }
+        .chat-system { color: #feca57; font-style: italic; }
+        
+        .chat-input-row {
+            display: flex; gap: 10px;
+        }
+        .chat-input-row input { margin: 0; flex: 1; }
+        .chat-input-row button { width: auto; padding: 0 20px; }
+
+    </style>
+</head>
+<body>
+
+    <!-- ================= LOGIN PAGE ================= -->
+    <div id="loginPage">
+        <div class="hacker-box">
+            <h2>SYSTEM LOGIN</h2>
+            <label>Name :</label>
+            <input type="text" id="nameInput" class="hacker-input" placeholder="Enter Identity">
+            
+            <label>Password : Enter the B-day</label>
+            <input type="password" id="pwdInput" class="hacker-input" placeholder="DDMMYYYY">
+            
+            <button class="hacker-btn" onclick="attemptLogin()">INITIATE HANDSHAKE</button>
+            <div id="loginError"></div>
+        </div>
+    </div>
+
+    <!-- ================= APP PAGE ================= -->
+    <div id="appPage">
+        <div class="layout-container">
+            
+            <!-- LEFT COLUMN: Encrypt / Decrypt Files -->
+            <div class="left-col friendly-container">
+                <div class="header-row">
+                    <h2 id="welcomeMsg" class="welcome-text">Welcome!</h2>
+                    <button class="btn-red" onclick="logout()">LOGOUT</button>
+                </div>
+
+                <div class="panel">
+                    <h3>Create a Secret</h3>
+                    <textarea id="messageInput" rows="4" placeholder="Type your message here..."></textarea>
+                    <button class="action-btn" onclick="encryptAndDownload()">LOCK & DOWNLOAD</button>
+                </div>
+
+                <div class="panel">
+                    <h3>Read a Secret</h3>
+                    <label style="color:#a4b0be;">Upload the downloaded .txt file:</label>
+                    <input type="file" id="fileInput">
+                    <div style="display: flex; gap: 10px;">
+                        <button class="action-btn" style="flex: 3;" onclick="decryptFile()">UNLOCK FILE</button>
+                        <button class="btn-red" style="flex: 1; padding: 12px; font-size: 20px; border-radius: 4px;" onclick="resetDecrypt()">RESET</button>
+                    </div>
+                    <div id="output"></div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Live Encrypted Chat -->
+            <div class="right-col friendly-container">
+                <div class="chat-header">
+                    <div>
+                        <h2>Secure Channel Chat</h2>
+                        <span id="chatStatus" class="chat-status">⟳ Connecting...</span>
+                    </div>
+                    <button class="btn-red" style="font-size: 14px;" onclick="requestErase()">ERASE ALL</button>
+                </div>
+                
+                <div id="chatMessages">
+                    <!-- Messages will appear here -->
+                </div>
+                
+                <div class="chat-input-row">
+                    <input type="text" id="chatInput" placeholder="Send an encrypted message..." onkeypress="handleEnter(event)">
+                    <button class="action-btn" onclick="sendChat()">SEND</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ================= JAVASCRIPT LOGIC ================= -->
+    <script>
+        const SYSTEM_KEY = "03072025";
+        const CHAT_TOPIC = "aurora_secret_comm_channel_abenad_03072025"; 
+        
+        let currentUser = "";
+        let mqttClient = null;
+        let chatHistory = []; 
+        let processedMessageIds = new Set(); // The Ultimate Duplicate Killer
+
+        /* --- LOGIN & AUTHENTICATION --- */
+        function attemptLogin() {
+            const name = document.getElementById('nameInput').value.trim().toLowerCase();
+            const pwd = document.getElementById('pwdInput').value.trim();
+            const errorDiv = document.getElementById('loginError');
+
+            if (pwd !== SYSTEM_KEY) {
+                errorDiv.innerText = "ACCESS DENIED: INVALID B-DAY.";
+                return;
+            }
+
+            let welcomeText = "";
+            if (name === 'abishek') {
+                welcomeText = "Welcome Abeee";
+                currentUser = "Abeee";
+            } else if (name === 'nadja') {
+                welcomeText = "Welcome Nadjosia";
+                currentUser = "Nadjosia";
+            } else {
+                errorDiv.innerText = "ACCESS DENIED: UNKNOWN ENTITY.";
+                return;
+            }
+
+            document.getElementById('loginError').innerText = "";
+            document.getElementById('welcomeMsg').innerText = welcomeText;
+            
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('appPage').style.display = 'block';
+
+            // Load stored messages
+            loadChatHistory();
+            connectLiveChat();
+        }
+
+        function logout() {
+            // Attempt to sever connection, disable listeners
+            if (mqttClient) {
+                try {
+                    mqttClient.onMessageArrived = function() {}; 
+                    mqttClient.onConnectionLost = function() {}; 
+                    mqttClient.disconnect();
+                } catch(e) {}
+                mqttClient = null;
+            }
+            
+            // Clear inputs and UI
+            document.getElementById('nameInput').value = '';
+            document.getElementById('pwdInput').value = '';
+            document.getElementById('messageInput').value = '';
+            resetDecrypt(); // Uses the new reset function
+            document.getElementById('chatMessages').innerHTML = '';
+            document.getElementById('chatStatus').innerText = "Disconnected";
+            
+            document.getElementById('appPage').style.display = 'none';
+            document.getElementById('loginPage').style.display = 'flex';
+        }
+
+        /* --- FILE ENCRYPTION / DECRYPTION --- */
+        function encryptAndDownload() {
+            const message = document.getElementById('messageInput').value;
+            if (!message) { alert("You need to type a message first!"); return; }
+
+            const encrypted = CryptoJS.AES.encrypt(message, SYSTEM_KEY).toString();
+            const blob = new Blob([encrypted], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "aurora_drop_" + Date.now() + ".txt";
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            document.getElementById('messageInput').value = '';
+        }
+
+        function decryptFile() {
+            const fileInput = document.getElementById('fileInput');
+            const outputArea = document.getElementById('output');
+
+            if (fileInput.files.length === 0) { alert("Please select a file to unlock."); return; }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const encryptedText = e.target.result;
+                try {
+                    const decryptedBytes = CryptoJS.AES.decrypt(encryptedText, SYSTEM_KEY);
+                    const originalMessage = decryptedBytes.toString(CryptoJS.enc.Utf8);
+                    if (!originalMessage) throw new Error("Invalid");
+                    
+                    outputArea.innerHTML = "<strong style='color:#00ff8c;'>UNLOCKED MESSAGE:</strong><br><br>" + originalMessage;
+                    outputArea.classList.remove('friendly-error');
+                } catch (error) {
+                    outputArea.innerHTML = "<strong>ERROR:</strong> This file wasn't created by our system, or it is corrupted.";
+                    outputArea.classList.add('friendly-error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- NEW: Reset Decrypt Section ---
+        function resetDecrypt() {
+            document.getElementById('fileInput').value = '';
+            const outputArea = document.getElementById('output');
+            outputArea.innerHTML = '';
+            outputArea.classList.remove('friendly-error');
+        }
+
+        /* --- LOCAL STORAGE (Encrypted History) --- */
+        function saveChatHistory() {
+            try {
+                const encryptedHistory = CryptoJS.AES.encrypt(JSON.stringify(chatHistory), SYSTEM_KEY).toString();
+                localStorage.setItem('aurora_chat_data', encryptedHistory);
+            } catch(e) { console.error("Could not save history"); }
+        }
+
+        function loadChatHistory() {
+            const stored = localStorage.getItem('aurora_chat_data');
+            document.getElementById('chatMessages').innerHTML = ''; 
+            processedMessageIds.clear(); // Reset duplicate checker on load
+            
+            if (stored) {
+                try {
+                    const decryptedBytes = CryptoJS.AES.decrypt(stored, SYSTEM_KEY);
+                    const decryptedString = decryptedBytes.toString(CryptoJS.enc.Utf8);
+                    chatHistory = JSON.parse(decryptedString);
+                    
+                    // Render all saved messages
+                    chatHistory.forEach(msg => {
+                        if (msg.msgId) processedMessageIds.add(msg.msgId); // Teach memory what we already saw
+                        renderMessageUI(msg.time, msg.sender, msg.text);
+                    });
+                } catch(e) {
+                    chatHistory = [];
+                }
+            } else {
+                chatHistory = [];
+            }
+        }
+
+        function wipeLocalChat() {
+            chatHistory = [];
+            processedMessageIds.clear();
+            localStorage.removeItem('aurora_chat_data');
+            document.getElementById('chatMessages').innerHTML = '';
+            appendSystemMessage("CHAT HAS BEEN SECURELY WIPED.");
+        }
+
+        /* --- LIVE ENCRYPTED CHAT & COMMANDS --- */
+        function connectLiveChat() {
+            const clientId = "agent_" + Math.random().toString(16).substr(2, 8);
+            mqttClient = new Paho.MQTT.Client("broker.emqx.io", 8084, "/mqtt", clientId);
+
+            mqttClient.onConnectionLost = function(responseObject) {
+                document.getElementById('chatStatus').innerText = "⚠ Disconnected";
+                document.getElementById('chatStatus').style.color = "#ff4757";
+                if (document.getElementById('appPage').style.display !== 'none') {
+                    setTimeout(connectLiveChat, 3000);
+                }
+            };
+
+            mqttClient.onMessageArrived = function(message) {
+                try {
+                    const decryptedBytes = CryptoJS.AES.decrypt(message.payloadString, SYSTEM_KEY);
+                    const decryptedString = decryptedBytes.toString(CryptoJS.enc.Utf8);
+                    
+                    if (decryptedString) {
+                        const data = JSON.parse(decryptedString);
+                        
+                        if (data.type === 'COMMAND' && data.action === 'ERASE') {
+                            wipeLocalChat();
+                        } 
+                        else if (data.type === 'MESSAGE') {
+                            // Check the Fingerprint: Have we rendered this specific message ID already?
+                            if (data.msgId && processedMessageIds.has(data.msgId)) {
+                                return; // SILENTLY KILL DUPLICATE
+                            }
+                            // Add to memory so we don't render it again
+                            if (data.msgId) {
+                                processedMessageIds.add(data.msgId);
+                            }
+
+                            renderMessageUI(data.time, data.sender, data.text);
+                            chatHistory.push(data); // Save the entire object, including msgId
+                            saveChatHistory();
+                        }
+                    }
+                } catch (e) {
+                    // Ignore junk data
+                }
+            };
+
+            const options = {
+                useSSL: true,
+                onSuccess: function() {
+                    document.getElementById('chatStatus').innerText = "● Live & Secure";
+                    document.getElementById('chatStatus').style.color = "#00ff8c";
+                    mqttClient.subscribe(CHAT_TOPIC);
+                    appendSystemMessage("Secure channel active. Signals encrypted.");
+                },
+                onFailure: function() {
+                    document.getElementById('chatStatus').innerText = "⚠ Connection Failed";
+                    document.getElementById('chatStatus').style.color = "#ff4757";
+                    setTimeout(connectLiveChat, 3000);
+                }
+            };
+
+            mqttClient.connect(options);
+        }
+
+        function sendChat() {
+            const inputField = document.getElementById('chatInput');
+            const text = inputField.value.trim();
+            
+            if (!text || !mqttClient || !mqttClient.isConnected()) return;
+
+            // Generate time string and a Unique Fingerprint ID
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+            const uniqueId = Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+
+            // Package message
+            const payload = JSON.stringify({ 
+                type: 'MESSAGE',
+                msgId: uniqueId,  // <--- The Fingerprint
+                time: timeStr,
+                sender: currentUser, 
+                text: text 
+            });
+            
+            const encryptedPayload = CryptoJS.AES.encrypt(payload, SYSTEM_KEY).toString();
+
+            const message = new Paho.MQTT.Message(encryptedPayload);
+            message.destinationName = CHAT_TOPIC;
+            mqttClient.send(message);
+
+            inputField.value = ''; 
+        }
+
+        function requestErase() {
+            if (!confirm("Are you sure? This will permanently delete the chat history for BOTH of you.")) return;
+            
+            if (!mqttClient || !mqttClient.isConnected()) {
+                alert("You must be connected to the chat server to wipe the chat for the other person.");
+                return;
+            }
+
+            // Send silent wipe command
+            const payload = JSON.stringify({ type: 'COMMAND', action: 'ERASE' });
+            const encryptedPayload = CryptoJS.AES.encrypt(payload, SYSTEM_KEY).toString();
+            
+            const message = new Paho.MQTT.Message(encryptedPayload);
+            message.destinationName = CHAT_TOPIC;
+            mqttClient.send(message);
+        }
+
+        function handleEnter(event) {
+            if (event.key === 'Enter') { sendChat(); }
+        }
+
+        /* --- CHAT UI HELPERS --- */
+        function renderMessageUI(timeStr, sender, text) {
+            const box = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = "chat-msg";
+            msgDiv.innerHTML = `<span style="color:#747d8c;">[${timeStr}]</span> <span class="chat-sender">[${sender}]:</span> ${text}`;
+            box.appendChild(msgDiv);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function appendSystemMessage(text) {
+            const box = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = "chat-msg chat-system";
+            msgDiv.innerText = "[System]: " + text;
+            box.appendChild(msgDiv);
+            box.scrollTop = box.scrollHeight;
+        }
+    </script>
+</body>
+</html>
